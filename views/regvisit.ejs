@@ -13,11 +13,13 @@
       <li><a href="/">Ajainfo</a></li>
     </ul>
     <hr>
-    <h2>Praegune ajahetk</h2>
-    <ul>
-      <li>Nädalapäev: <%= nowWD %></a></li>
-      <li>Kuupäev: <%= nowD %></a></li>
-      <li>Kellaaeg: <%= nowT %></a></li>
-    </ul>
+    <h2>Pane oma nimi kirja</h2>
+    <form method="post">
+      <label for="firstNameInput">Eesnimi</label><br>
+      <input type="text" id="firstNameInput" name="firstNameInput" placeholder="Eesnimi..."><br>
+      <label for="lastNameInput">Perekonnanimi</label><br>
+      <input type="text" id="lastNameInput" name="lastNameInput" placeholder="Perekonnanimi..."><br>
+      <input type="submit" id="regSumbit" name="regSumbit" value="Salvesta">
+    </form>
   </body>
 </html>
