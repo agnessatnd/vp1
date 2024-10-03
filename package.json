@@ -20,7 +20,8 @@
     "url": "https://github.com/agnessatnd/vp1/issues"
   },
   "homepage": "https://github.com/agnessatnd/vp1#readme",
-	"dependencies": {
-    		"express": "~4.16.1"
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.21.0"
   }
 }
