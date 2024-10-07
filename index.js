@@ -42,12 +42,16 @@ app.get("/regvisit", (req, res)=>{
 
 app.post("/regvisit", (req, res)=>{
     console.log(req.body);
+    const weekdayNow = dtEt.dayEt();
+    const dateNow = dtEt.dateEt();
+    const timeNow = dtEt.timeEt();
+
     fs.open("public/text_files/visitorlog.txt", "a", (err, file)=>{
         if(err){
             throw err;
         }
         else {
-            fs.appendFile("public/text_files/visitorlog.txt", req.body.firstNameInput + " " + req.body.lastNameInput + ":", (err)=>{
+            fs.appendFile("public/text_files/visitorlog.txt", req.body.firstNameInput + " " + req.body.lastNameInput + ", " +  weekdayNow + ", " + dateNow + ", " + timeNow + ";", (err)=>{
                 if(err){
                     throw err;
                 }
@@ -57,6 +61,20 @@ app.post("/regvisit", (req, res)=>{
                 }
             });
 
+        }
+    });
+});
+
+app.get("/visitlog", (req, res)=>{
+    let log = [];
+    fs.readFile("public/text_files/visitorlog.txt", "utf-8", (err, data)=>{
+        if(err || data.length === 0){
+            //throw err;
+            res.render("visitlog", {visit: "Külastuslogi", listData: ["Ei leidnud ühtegi külastust"]});
+        }
+        else {
+            log = data.split(";").filter(item => item.trim() !== "");
+            res.render("visitlog", {visit: "Külastuslogi", listData: log});
         }
     });
 });
