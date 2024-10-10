@@ -2,6 +2,8 @@ const express = require("express");
 const app = express();
 const dtEt = require("./dateTime.js");
 const fs = require("fs");
+const dbInfo = require("../../vp2024_config.js");
+const mysql = require("mysql2");
 //paringu lahti harutamiseks POST meetodil
 const bodyParser = require("body-parser");
 
@@ -9,6 +11,14 @@ app.set("view engine", "ejs");
 app.use(express.static("public"));
 //paringu URL-i parsimine, falsee kui ainult tekst, true kui muud ka
 app.use(bodyParser.urlencoded({extended: false}));
+
+//loon andmebaasi ühenduse
+const conn = mysql.createConnection({
+    host: dbInfo.configData.host,
+    user: dbInfo.configData.user,
+    password: dbInfo.configData.password,
+    database: dbInfo.configData.database
+});
 
 app.get("/", (req, res)=>{
     //res.send("Express läks täiesti käima!");'
@@ -78,5 +88,54 @@ app.get("/visitlog", (req, res)=>{
         }
     });
 });
+
+app.get("/eestifilm", (req, res)=>{
+    res.render("filmindex");
+});
+
+app.get("/eestifilm/tegelased", (req, res) => {
+    let sqlReq = "SELECT first_name, last_name, birth_date FROM person";
+    let persons = [];
+    conn.query(sqlReq, (err, sqlres) => {
+        if (err) {
+            throw err;
+        } else {
+            console.log(sqlres);
+            persons = sqlres;
+            res.render("tegelased", { persons: persons });
+        }
+    });
+});
+
+app.get("/regvisit_db", (req, res)=>{
+    let notice = "";
+    let firstName = "";
+    let lastName = "";
+    res.render("regvisit_db", {notice: notice, firstName: firstName, lastName: lastName});
+})
+
+app.post("/regvisit_db", (req, res)=>{
+    let notice = "";
+    let firstName = "";
+    let lastName = "";
+    if(!req.body.firstNameInput || !req.body.lastNameInput){
+        firstName = req.body.firstNameInput;
+        lastName = req.body.lastNameInput;
+        notice = "Osa andmeid on sisestamata!";
+        res.render("reqvisit_db", {notice: notice, firstName: firstName, lastName: lastName});
+    }
+    else{
+        let sqlreq = "INSERT INTO visitlog (first_name, last_name) VALUES (?, ?)";
+        conn.query(sqlreq, [req.body.firstNameInput, req.body.lastNameInput], (err, sqlres)=>{
+            if(err){
+                throw err;
+            }
+            else{
+                notice = "Külastus registreeritud!";
+                res.render("reqvisit_db", {notice: notice, firstName: firstName, lastName: lastName});
+            }
+        });
+    };
+})
 
 app.listen(5114);

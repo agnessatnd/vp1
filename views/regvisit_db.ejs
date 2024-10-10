@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="et">
+  <head>
+    <meta charset="utf-8" />
+    <title>Agnessa</title>
+  </head>
+  <body>
+    <img src="/banner/vp_banner_2024.png" alt="Veebiprogrammeerimine 2024.aasta banner"></img>
+    <h1>Agnessa Tund</h1>
+    <p>see leht on loodud õppetöö raames <a href="https:/www.tlu.ee" target="_blank">Tallinna Ülikoolis</a> ja ei sisalda tõsiseltvõetavat sisu</p>
+    <hr>
+    <ul>
+      <li><a href="/">Ajainfo</a></li>
+    </ul>
+    <hr>
+    <h2>Pane oma nimi kirja</h2>
+    <form method="post">
+      <label for="firstNameInput">Eesnimi</label><br>
+      <input type="text" id="firstNameInput" name="firstNameInput" placeholder="Eesnimi..." value="<%= firstName %>"><br>
+      <label for="lastNameInput">Perekonnanimi</label><br>
+      <input type="text" id="lastNameInput" name="lastNameInput" placeholder="Perekonnanimi..." value="<%= lastName %>"><br>
+      <input type="submit" id="regSumbit" name="regSumbit" value="Salvesta">
+    </form>
+    <p><%= notice %></p>
+  </body>
+</html>
