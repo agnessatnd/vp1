@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="et">
+  <head>
+    <meta charset="utf-8" />
+    <title>Agnessa</title>
+  </head>
+  <body>
+    <img src="/banner/vp_banner_2024.png" alt="Veebiprogrammeerimine 2024.aasta banner"></img>
+    <h1>Agnessa Tund</h1>
+    <p>see leht on loodud õppetöö raames <a href="https:/www.tlu.ee" target="_blank">Tallinna Ülikoolis</a> ja ei sisalda tõsiseltvõetavat sisu</p>
+    <hr>
+    <ul>
+      <li><a href="/">Ajainfo</a></li>
+    </ul>
+    <hr>
+    <h3>Sisesta filmi tegelane</h3>
+    <!-- Filmi tegelase lisamine, filmi lisamine, filmi rolli lisamine -->
+    <form action="/add-person" method="post">
+        <label for="firstName">Eesnimi:</label><br>
+        <input type="text" id="firstName" name="first_name"><br>
+        <label for="lastName">Perekonnanimi:</label><br>
+        <input type="text" id="lastName" name="last_name"><br>
+        <label for="birthDate">Sünnikuupäev:</label><br>
+        <input type="date" id="birthDate" name="birth_date"><br>
+        <input type="submit" name="personSubmit" value="Lisa tegelane">
+    </form>
+    <p><%= notice %></p>
+    <hr>
+    <h3>Sisesta film</h3>
+    <form action="/add-movie" method="post">
+        <label for="title">Pealkiri:</label><br>
+        <input type="text" id="title" name="title"><br>
+        <label for="productionYear">Tootmisaasta:</label><br>
+        <input type="number" id="productionYear" name="production_year"><br>
+        <label for="duration">Kestus (min):</label><br>
+        <input type="number" id="duration" name="duration"><br>
+        <label for="description">Kirjeldus:</label><br>
+        <input type="text" id="description" name="description"><br>
+        <input type="submit" name="filmSubmit" value="Lisa film"><br>
+    </form>
+    <p><%= notice %></p>
+    <hr>
+    <h3>Sisesta filmi tegelase roll</h3>
+    <form action="/add-role" method="post">
+        <label for="personId">Tegelase ID:</label><br>
+        <input type="number" id="personId" name="person_id"><br>
+        <label for="movieId">Filmi ID:</label><br>
+        <input type="number" id="movieId" name="movie_id"><br>
+        <label for="positionSelect">Positsioon:</label><br>
+        <select id="positionSelect" name="position_name">
+            <option value="näitleja">Näitleja</option>
+            <option value="režissöör">Režissöör</option>
+        </select><br>
+        <label for="role">Roll:</label><br>
+        <input type="text" id="role" name="role"><br>
+        <input type="submit" name="roleSubmit" value="Lisa roll">
+    </form>
+    <p><%= notice %></p>
+  </body>
+</html>

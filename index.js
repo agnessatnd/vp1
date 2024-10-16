@@ -107,6 +107,20 @@ app.get("/eestifilm/tegelased", (req, res) => {
     });
 });
 
+app.get("/visitlogdb", (req, res) => {
+    let sqlReq = "SELECT first_name, last_name, visit_time FROM visitlog";
+    let visits = [];
+    conn.query(sqlReq, (err, sqlres) => {
+        if (err) {
+            throw err;
+        } else {
+            console.log(sqlres);
+            visits = sqlres;
+            res.render("visitlogdb", { visits: visits });
+        }
+    });
+});
+
 app.get("/regvisit_db", (req, res)=>{
     let notice = "";
     let firstName = "";
@@ -122,7 +136,7 @@ app.post("/regvisit_db", (req, res)=>{
         firstName = req.body.firstNameInput;
         lastName = req.body.lastNameInput;
         notice = "Osa andmeid on sisestamata!";
-        res.render("reqvisit_db", {notice: notice, firstName: firstName, lastName: lastName});
+        res.render("regvisit_db", {notice: notice, firstName: firstName, lastName: lastName});
     }
     else{
         let sqlreq = "INSERT INTO visitlog (first_name, last_name) VALUES (?, ?)";
@@ -132,10 +146,129 @@ app.post("/regvisit_db", (req, res)=>{
             }
             else{
                 notice = "Külastus registreeritud!";
-                res.render("reqvisit_db", {notice: notice, firstName: firstName, lastName: lastName});
+                res.render("regvisit_db", {notice: notice, firstName: firstName, lastName: lastName});
             }
         });
     };
 })
+
+app.get("/moviedatadb", (req, res) => {
+    let notice = "";
+    res.render("moviedatadb", { notice });
+});
+
+app.get("/add-person", (req, res) => {
+    let notice = "";
+    let firstName = "";
+    let lastName = "";
+    let birthDate = "";
+    res.render("moviedatadb", {notice, firstName, lastName, birthDate });
+});
+
+app.get("/add-movie", (req, res) => {
+    let notice = "";
+    let title = "";
+    let productionYear = "";
+    let duration = "";
+    let description = "";
+    res.render("moviedatadb", {notice, title, productionYear, duration, description});
+});
+
+
+app.get("/add-role", (req, res) => {
+    let notice = "";
+    let movieId = "";
+    let personId = "";
+    let positionName = "";
+    let role = "";
+    res.render("moviedatadb", {notice, movieId, personId, positionName, role});
+});
+
+// Tegelase lisamine
+app.post("/add-person", (req, res) => {
+    let notice = "";
+    let firstName = req.body.first_name;
+    let lastName = req.body.last_name;
+    let birthDate = req.body.birth_date;
+
+    if (!firstName || !lastName || !birthDate) {
+        notice = "Osa andmeid on sisestamata!";
+        res.render("moviedatadb", { notice, firstName, lastName, birthDate });
+    } else {
+        let sqlreq = "INSERT INTO person (first_name, last_name, birth_date) VALUES (?, ?, ?)";
+        conn.query(sqlreq, [firstName, lastName, birthDate], (err) => {
+            if(err){
+                throw err;
+            }
+            else{
+                notice = "Tegelane lisatud!";
+                res.render("moviedatadb", { notice, firstName: "", lastName: "", birthDate: "" });
+            }
+        });
+    }
+});
+
+// Filmide lisamine
+app.post("/add-movie", (req, res) => {
+    let notice = "";
+    let title = req.body.title;
+    let productionYear = req.body.production_year;
+    let duration = req.body.duration;
+    let description = req.body.description;
+
+    if (!title || !productionYear || !duration || !description) {
+        notice = "Osa andmeid on sisestamata!";
+        res.render("moviedatadb", { notice, title, productionYear, duration, description });
+    } else {
+        let sqlreq = "INSERT INTO movie (title, production_year, duration, description) VALUES (?, ?, ?, ?)";
+        conn.query(sqlreq, [title, productionYear, duration, description], (err) => {
+            if(err){
+                throw err;
+            }
+            else{
+                notice = "Film lisatud!";
+                res.render("moviedatadb", { notice, title: "", productionYear: "", duration: "", description: "" });
+            }
+        });
+    }
+});
+
+// Rolli lisamine
+app.post("/add-role", (req, res) => {
+    let notice = "";
+    let personId = req.body.person_id;
+    let movieId = req.body.movie_id;
+    let positionName = req.body.position_name;
+    let role = req.body.role;
+
+    if (!personId || !movieId || !positionName || !role) {
+        notice = "Osa andmeid on sisestamata!";
+        return res.render("moviedatadb", { notice, personId, movieId, positionName, role });
+    }
+
+    let positionQuery = "SELECT id FROM position WHERE position_name = ?";
+    conn.query(positionQuery, [positionName], (err, positionResult) => {
+        if (err) throw err;
+        if (positionResult.length === 0) {
+            notice = "Positsiooni ei leitud.";
+            return res.render("moviedatadb", { notice, personId, movieId, positionName, role });
+        }
+        let positionId = positionResult[0].id;
+
+        let roleQuery = "INSERT INTO person_in_movie (person_id, movie_id, position_id, role) VALUES (?, ?, ?, ?)";
+        let values = [personId, movieId, positionId, role];
+
+        conn.query(roleQuery, values, (err) => {
+            if(err){
+                throw err;
+            }
+            else{
+                notice = "Roll lisatud!";
+                res.render("moviedatadb", { notice, personId: "", movieId: "", positionName: "", role: "" });
+            }
+        });
+    });
+});
+
 
 app.listen(5114);
