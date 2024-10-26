@@ -20,10 +20,27 @@ const conn = mysql.createConnection({
     database: dbInfo.configData.database
 });
 
-app.get("/", (req, res)=>{
-    //res.send("Express läks täiesti käima!");'
-    res.render("index");
+app.get("/", (req, res) => {
+    const [daysPast, daysLeft] = dtEt.dateDiff();
+    
+    // uudis
+    const sqlReq = "SELECT news_title, news_text, news_date FROM vp1_news ORDER BY news_date DESC LIMIT 1";
+    
+    conn.query(sqlReq, (err, results) => {
+        if (err) {
+            throw err;
+        }
+        const latestNews = results.length > 0 ? {
+            news_title: results[0].news_title,
+            news_text: results[0].news_text,
+            news_date: dtEt.givenDate(results[0].news_date)
+        } : null;
+
+        res.render("index", { daysPast: daysPast, daysLeft: daysLeft, latestNews: latestNews });
+    });
 });
+
+
 
 app.get("/timenow", (req, res)=>{
     const weekdayNow = dtEt.dayEt();
@@ -101,7 +118,15 @@ app.get("/eestifilm/tegelased", (req, res) => {
             throw err;
         } else {
             console.log(sqlres);
-            persons = sqlres;
+
+            for (let i = 0; i < sqlres.length; i++) {
+                persons.push({
+                    first_name: sqlres[i].first_name,
+                    last_name: sqlres[i].last_name,
+                    birth_date: dtEt.givenDate(sqlres[i].birth_date)
+                });
+            }
+
             res.render("tegelased", { persons: persons });
         }
     });
@@ -152,6 +177,7 @@ app.post("/regvisit_db", (req, res)=>{
     };
 })
 
+
 app.get("/moviedatadb", (req, res) => {
     let notice = "";
     res.render("moviedatadb", { notice });
@@ -175,13 +201,37 @@ app.get("/add-movie", (req, res) => {
 });
 
 
-app.get("/add-role", (req, res) => {
+app.get("/add-position", (req, res) => {
     let notice = "";
-    let movieId = "";
-    let personId = "";
     let positionName = "";
-    let role = "";
-    res.render("moviedatadb", {notice, movieId, personId, positionName, role});
+    let description = "";
+    res.render("moviedatadb", { notice, positionName, description });
+});
+
+
+app.post("/add-position", (req, res) => {
+    let notice = "";
+    let positionName = req.body.position_name;
+    let description = req.body.description;
+
+    if (!positionName) {
+        notice = "Osa andmeid on sisestamata!";
+        return res.render("moviedatadb", { notice, positionName });
+    }
+    else {
+        let sqlreq = "INSERT INTO `position` (position_name, description) VALUES (?, ?)";
+        conn.query(sqlreq, [positionName, description], (err) => {
+            if(err){
+                console.log("Position:", positionName);
+                console.log("Description:", description);
+                throw err;
+            }
+            else{
+                notice = "Positsioon lisatud!";
+                res.render("moviedatadb", { notice, positionName: "", description: "" });
+            }
+        });
+    }
 });
 
 // Tegelase lisamine
@@ -233,42 +283,75 @@ app.post("/add-movie", (req, res) => {
     }
 });
 
-// Rolli lisamine
-app.post("/add-role", (req, res) => {
+app.get("/addnews", (req, res) => {
+    let newsTitle = "";
+    let newsText = "";
+    let expired = "";
     let notice = "";
-    let personId = req.body.person_id;
-    let movieId = req.body.movie_id;
-    let positionName = req.body.position_name;
-    let role = req.body.role;
 
-    if (!personId || !movieId || !positionName || !role) {
-        notice = "Osa andmeid on sisestamata!";
-        return res.render("moviedatadb", { notice, personId, movieId, positionName, role });
-    }
+    const today = new Date();
+    const tenDaysFromNow = new Date(today);
+    tenDaysFromNow.setDate(today.getDate() + 10);
 
-    let positionQuery = "SELECT id FROM position WHERE position_name = ?";
-    conn.query(positionQuery, [positionName], (err, positionResult) => {
-        if (err) throw err;
-        if (positionResult.length === 0) {
-            notice = "Positsiooni ei leitud.";
-            return res.render("moviedatadb", { notice, personId, movieId, positionName, role });
-        }
-        let positionId = positionResult[0].id;
+    const year = tenDaysFromNow.getFullYear();
+    const month = String(tenDaysFromNow.getMonth() + 1).padStart(2, '0');
+    const day = String(tenDaysFromNow.getDate()).padStart(2, '0');
+    expired = `${year}-${month}-${day}`;
 
-        let roleQuery = "INSERT INTO person_in_movie (person_id, movie_id, position_id, role) VALUES (?, ?, ?, ?)";
-        let values = [personId, movieId, positionId, role];
-
-        conn.query(roleQuery, values, (err) => {
-            if(err){
-                throw err;
-            }
-            else{
-                notice = "Roll lisatud!";
-                res.render("moviedatadb", { notice, personId: "", movieId: "", positionName: "", role: "" });
-            }
-        });
-    });
+    res.render("addnews", { newsTitle, newsText, expired, notice });
 });
 
+app.post("/addnews", (req, res) => {
+    let newsTitle = req.body.titleInput;
+    let newsText = req.body.newsInput;
+    let expired = req.body.expireInput;
+    let user = 1;
+
+    if (!newsTitle || newsTitle.length < 3) {
+        let notice = "Uudise pealkiri peab olema vähemalt 3 tähemärki!";
+        return res.render("addnews", { newsTitle, newsText, expired, notice });
+    }
+    if (!newsText || newsText.length < 10) {
+        let notice = "Uudise sisu peab olema vähemalt 10 tähemärki!";
+        return res.render("addnews", { newsTitle, newsText, expired, notice });
+    }
+
+    if (!newsTitle || !newsText || !expired) {
+        let notice = "Osa andmeid on sisestamata!";
+        res.render("addnews", {newsTitle, newsText, expired, notice});
+    } else {
+        let sqlreq = "INSERT INTO vp1_news (news_title, news_text, expire_date, user_id) VALUES (?, ?, ?, ?)";
+        conn.query(sqlreq, [newsTitle, newsText, expired, user], (err) => {
+            if (err) {
+                throw err;
+            } else {
+                let notice = "Uudis salvestatud!";
+                res.render("addnews", {newsTitle: "", newsText: "", expired: "", notice});
+            }
+        });
+    }
+});
+
+app.get("/news", (req, res) => {
+    const today = dtEt.dateEt();
+    const todayDay = dtEt.dayEt();
+    const currentTime = dtEt.timeEt();
+
+    let sqlReq = "SELECT news_title, news_text, news_date FROM vp1_news WHERE expire_date >= ? ORDER BY id DESC";
+    const formattedDate = new Date().toISOString().split('T')[0];
+    conn.query(sqlReq, [formattedDate], (err, results) => {
+        if (err) {
+            throw err;
+        } else {
+            let newsList = results.map(item => ({
+                news_title: item.news_title,
+                news_text: item.news_text,
+                news_date: dtEt.givenDate(item.news_date)
+            }));
+
+            res.render("news", { newsList, today, todayDay, currentTime });
+        }
+    });
+});
 
 app.listen(5114);

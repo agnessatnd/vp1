@@ -8,6 +8,17 @@
     <img src="/banner/vp_banner_2024.png" alt="Veebiprogrammeerimine 2024.aasta banner"></img>
     <h1>Agnessa Tund</h1>
     <p>see leht on loodud õppetöö raames <a href="https:/www.tlu.ee" target="_blank">Tallinna Ülikoolis</a> ja ei sisalda tõsiseltvõetavat sisu</p>
+    <p>Semestri algusest on möödas: <%= daysPast %> päeva</p>
+    <p>Semestri lõpuni on jäänud: <%= daysLeft %> päeva</p>
+
+    <% if (latestNews) { %>
+      <h2>Viimane Uudis</h2>
+      <h3><%= latestNews.news_title %></h3>
+      <p>Lisamise kuupäev: <%= latestNews.news_date %></p>
+      <pre>Sisu: <%= latestNews.news_text %></pre>
+    <% } else { %>
+        <p>Hetkel pole ühtegi uudist!</p>
+    <% } %>
     <hr>
     <ul>
       <li><a href="/timenow">Ajainfo</a></li>
@@ -18,6 +29,8 @@
       <li><a href="/visitlogdb">Külastuslogi (andmebaasis)</a></li>
       <li><a href="/moviedatadb">Filmiga seotud andmete lisamine andmebaasi</a></li>
       <li><a href="/eestifilm">Eesti filmi avaleht</a></li>
+      <li><a href="addnews">Lisa uudis</a></li>
+      <li><a href="news">Uudised</a></li>
     </ul>
   </body>
 </html>

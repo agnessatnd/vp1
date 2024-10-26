@@ -11,6 +11,18 @@ const dateEt = function(){
     return dateNowEt;
 }
 
+const givenDate = function(gDate){
+    //formaatida kuupaevad eesti paraseks
+    let date = new Date(gDate);
+    let day = date.getDate();
+    let month = date.getMonth();
+    let year = date.getFullYear();
+    let dateEt = day + '. ' + monthNamesEt[month] + ' ' + year;
+
+    return dateEt;
+}
+
+
 const dayEt = function(){
     let timenow = new Date(); 
     let daynow = timenow.getDay();
@@ -30,6 +42,20 @@ const timeEt = function(){
     let timeNowEt = hoursnow + ':' + minutesnow + ':' + secondsnow;
 
     return timeNowEt;
+}
+
+const dateDiff = function(){
+    let semesterStart = new Date("09/02/2024");
+    let semesterEnd = new Date("01/26/2025");
+    let currentDate = new Date(); 
+
+    let pastTimeDiff = currentDate.getTime() - semesterStart.getTime();
+    let daysPast = Math.floor(pastTimeDiff / (1000 * 3600 * 24));
+
+    let remainingTimeDiff = semesterEnd.getTime() - currentDate.getTime();
+    let daysLeft = Math.ceil(remainingTimeDiff / (1000 * 3600 * 24));
+
+    return [daysPast, daysLeft];
 }
 
 const partOfDay = function(){
@@ -66,4 +92,4 @@ const partOfDay = function(){
 }
 
 
-module.exports = {dateEt: dateEt, dayEt: dayEt, timeEt: timeEt, partOfDay: partOfDay};
+module.exports = {dateEt: dateEt, dayEt: dayEt, timeEt: timeEt, partOfDay: partOfDay, givenDate: givenDate, dateDiff: dateDiff};
