@@ -6,11 +6,18 @@ const dbInfo = require("../../vp2024_config.js");
 const mysql = require("mysql2");
 //paringu lahti harutamiseks POST meetodil
 const bodyParser = require("body-parser");
+//failide üleslaadimiseks
+const multer = require("multer");
+// pildimanipulatsiooniks (suuruse muutmine)
+const sharp = require("sharp");
 
 app.set("view engine", "ejs");
 app.use(express.static("public"));
 //paringu URL-i parsimine, falsee kui ainult tekst, true kui muud ka
-app.use(bodyParser.urlencoded({extended: false}));
+app.use(bodyParser.urlencoded({extended: true}));
+
+//seadistame vahevara multer fotodde laadimiseks kindlasse kataloogi
+const upload = multer({dest: "./public/gallery/orig/"});
 
 //loon andmebaasi ühenduse
 const conn = mysql.createConnection({
@@ -350,6 +357,37 @@ app.get("/news", (req, res) => {
             }));
 
             res.render("news", { newsList, today, todayDay, currentTime });
+        }
+    });
+});
+
+app.get("/photoupload", (req, res) => {
+    res.render("photoupload");
+});
+
+app.post("/photoupload", upload.single("photoInput"), (req, res) => {
+    console.log(req.body);
+    console.log(req.file);
+    //genereerime oma failinime
+    const fileName = "vp_" + Date.now() + ".jpg";
+    //nimetame uleslaetud faili umber
+    fs.rename(req.file.path, req.file.destination + fileName,(err)=>{
+        console.log(err);
+
+    });
+    //teeme pildi kahes erisuuruses
+    sharp(req.file.destination + fileName).resize(800,600).jpeg({quality: 90}).toFile("./public/gallery/normal/" + fileName);
+    sharp(req.file.destination + fileName).resize(100,100).jpeg({quality: 90}).toFile("./public/gallery/thumb/" + fileName);
+    //salvestame andmebaasi
+    let sqlReq = "INSERT INTO vp1_photos (file_name, orig_name, alt_text, privacy, user_id) VALUES (?, ?, ?, ?, ?)";
+    const user_id = 1;
+
+    conn.query(sqlReq, [fileName, req.file.originalname, req.body.altInput, req.body.privacyInput, user_id], (err, result)=>{
+        if(err) {
+            throw err;
+        }
+        else {
+            res.render("photoupload");
         }
     });
 });
