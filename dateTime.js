@@ -11,6 +11,24 @@ const dateEt = function(){
     return dateNowEt;
 }
 
+const daysBetween = function(gDate){
+	notice = "teadmata";
+	let today = new Date();
+	let anotherDay = new Date(gDate);
+	let diff = today - anotherDay;
+	let diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+	if(today == anotherDay){
+		notice = "tÃ¤na";
+	}
+	else if(today < anotherDay){
+		notice = Math.abs(diffDays) + " pÃ¤eva pÃ¤rast";
+	}
+	else {
+		notice = diffDays + " pÃ¤eva tagasi";
+	}
+	return notice;
+}
+
 const givenDate = function(gDate){
     //formaatida kuupaevad eesti paraseks
     let date = new Date(gDate);
@@ -22,6 +40,20 @@ const givenDate = function(gDate){
     return dateEt;
 }
 
+const givenDateTime = function(gDate){
+    //formaatida kuupaevad eesti paraseks
+    let date = new Date(gDate);
+    let day = date.getDate();
+    let month = date.getMonth();
+    let year = date.getFullYear();
+    let hours = date.getHours();
+    let minutes = date.getMinutes();
+    let seconds = date.getSeconds();
+
+    let dateEt = day + '. ' + monthNamesEt[month] + ' ' + year + ' ' + hours + ':' + minutes + ':' + seconds;
+
+    return dateEt;
+}
 
 const dayEt = function(){
     let timenow = new Date(); 
@@ -92,4 +124,4 @@ const partOfDay = function(){
 }
 
 
-module.exports = {dateEt: dateEt, dayEt: dayEt, timeEt: timeEt, partOfDay: partOfDay, givenDate: givenDate, dateDiff: dateDiff};
+module.exports = {dateEt: dateEt, dayEt: dayEt, timeEt: timeEt, partOfDay: partOfDay, givenDate: givenDate, dateDiff: dateDiff, givenDateTime: givenDateTime, daysBetween: daysBetween};

@@ -10,6 +10,8 @@ const bodyParser = require("body-parser");
 const multer = require("multer");
 // pildimanipulatsiooniks (suuruse muutmine)
 const sharp = require("sharp");
+//parooli krupteerimiseks
+const bcrypt = require("bcrypt");
 
 app.set("view engine", "ejs");
 app.use(express.static("public"));
@@ -30,7 +32,6 @@ const conn = mysql.createConnection({
 app.get("/", (req, res) => {
     const [daysPast, daysLeft] = dtEt.dateDiff();
     
-    // uudis
     const sqlReq = "SELECT news_title, news_text, news_date FROM vp1_news ORDER BY news_date DESC LIMIT 1";
     
     conn.query(sqlReq, (err, results) => {
@@ -47,7 +48,106 @@ app.get("/", (req, res) => {
     });
 });
 
+app.get("/signin", (req, res) => {
+    res.render("signin");
+});
 
+app.post("/signin", (req, res) => {
+    let notice = "";
+
+    if (!req.body.emailInput || !req.body.passwordInput) {
+        notice = "E-mail või parool on sisestamata!";
+        return res.render("signin", { notice: notice });
+    }
+    else{
+        let sqlReq = "SELECT id, password FROM vp1_users WHERE email = ?";
+        conn.execute(sqlReq, [req.body.emailInput], (err, result) => {
+            if(err){
+                console.log("Viga andmebaasist lugedes!" + err);
+                notice = "Tehniline viga, sisselogimine ebaoõnestus!";
+                res.render("signin", { notice: notice});
+            }
+            else{
+                if(result[0] != null){
+                    //kasutaja leiti
+                    bcrypt.compare(req.body.passwordInput, result[0].password, (err, compareresult) => {
+                        if(err){
+                            notice = "Tehniline viga, sisselogimine ebaõnnestus!";
+                            res.render("signin", { notice: notice});
+                        }
+                        else{
+                            if(compareresult){
+                                notice = "Sisselogimine õnnestus!";
+                                res.render("signin", { notice: notice});
+                            }
+                            else{
+                                notice = "Kasutajatunnus ja/või parool on vale!";
+                                res.render("signin", { notice: notice });
+                            }
+                        }
+                    });
+                }
+                else{
+                    notice = "Kasutajatunnus ja/või parool on vale!";
+                    res.render("signin", { notice: notice });
+                }
+
+            }
+        });
+    }
+});
+
+
+app.get("/signup", (req, res)=>{
+    res.render("signup");
+});
+
+app.post("/signup", (req, res)=>{
+    let notice = "Ootan andmeid!";
+    console.log(req.body);
+
+    if(!req.body.firstNameInput || !req.body.lastNameInput || !req.body.birthDateInput || !req.body.genderInput || !req.body.emailInput ||
+        req.body.passwordInput.length < 8 || req.body.passwordInput !== req.body.confirmPasswordInput){
+        console.log("Osa andmeid on sisetamata või paroolid ei kattu!")
+        notice = "Osad andmed on puudu, parool on liiga lühike voi paroolid ei kattu!";
+        res.render("signup", {notice: notice});
+    }//kui andmetes viga ... loppeb
+    else{
+        notice = "Andmed sisestatud!";
+        //loome parooli räsi jaoks "soola"
+        bcrypt.genSalt(10, (err, salt)=>{
+            if(err){
+                notice = "Tehniline viga, kasutajat ei loodud!";
+                res.render("signup", {notice: notice});
+            }
+            else{
+                //krupteerime parooli
+                bcrypt.hash(req.body.passwordInput, salt, (err, pwdHash)=>{
+                    if(err){
+                        notice = "Tehniline viga parooli krüpteerimisel, kasutajat ei loodud!";
+                        res.render("signup", {notice: notice})
+                    }
+                    else{
+                        let sqlReq = "INSERT INTO vp1_users (first_name, last_name, birth_date, gender, email, password) VALUES (?, ?, ?, ?, ?, ?)";
+
+                        conn.execute(sqlReq, [req.body.firstNameInput, req.body.lastNameInput, req.body.birthDateInput, req.body.genderInput, req.body.emailInput, pwdHash], (err, result)=>{
+                            if(err){
+                                notice = "Tehniline viga andmebaasi kirjutamisel, kasutajat ei loodud!";
+                                res.render("signup", {notice: notice});
+                            }
+                            else{
+                                notice = "Kasutaja loodud!";
+                                res.render("signup", {notice: notice});
+                            }
+                        });//conn.execute loppeb
+                    }
+                });//hash loppeb
+            }
+        })//genSalt loppeb
+
+    }//kui andmed on korras, loppeb
+    //res.render("signup");
+});
 
 app.get("/timenow", (req, res)=>{
     const weekdayNow = dtEt.dayEt();
@@ -312,10 +412,11 @@ app.post("/addnews", (req, res) => {
     let newsTitle = req.body.titleInput;
     let newsText = req.body.newsInput;
     let expired = req.body.expireInput;
+    let notice = "";
     let user = 1;
 
     if (!newsTitle || newsTitle.length < 3) {
-        let notice = "Uudise pealkiri peab olema vähemalt 3 tähemärki!";
+        notice = "Uudise pealkiri peab olema vähemalt 3 tähemärki!";
         return res.render("addnews", { newsTitle, newsText, expired, notice });
     }
     if (!newsText || newsText.length < 10) {
@@ -324,7 +425,7 @@ app.post("/addnews", (req, res) => {
     }
 
     if (!newsTitle || !newsText || !expired) {
-        let notice = "Osa andmeid on sisestamata!";
+        notice = "Osa andmeid on sisestamata!";
         res.render("addnews", {newsTitle, newsText, expired, notice});
     } else {
         let sqlreq = "INSERT INTO vp1_news (news_title, news_text, expire_date, user_id) VALUES (?, ?, ?, ?)";
@@ -332,7 +433,7 @@ app.post("/addnews", (req, res) => {
             if (err) {
                 throw err;
             } else {
-                let notice = "Uudis salvestatud!";
+                notice = "Uudis salvestatud!";
                 res.render("addnews", {newsTitle: "", newsText: "", expired: "", notice});
             }
         });
@@ -362,15 +463,22 @@ app.get("/news", (req, res) => {
 });
 
 app.get("/photoupload", (req, res) => {
-    res.render("photoupload");
+    let notice = "";
+
+    res.render("photoupload", { notice });
 });
 
 app.post("/photoupload", upload.single("photoInput"), (req, res) => {
+    let notice = "";
     console.log(req.body);
     console.log(req.file);
     //genereerime oma failinime
     const fileName = "vp_" + Date.now() + ".jpg";
     //nimetame uleslaetud faili umber
+    if (!req.file) {
+        notice = "Pildifail on sisestamata!";
+        return res.render("photoupload", { notice });
+    }
     fs.rename(req.file.path, req.file.destination + fileName,(err)=>{
         console.log(err);
 
@@ -387,9 +495,28 @@ app.post("/photoupload", upload.single("photoInput"), (req, res) => {
             throw err;
         }
         else {
-            res.render("photoupload");
+            notice = "Pilt laeti üles!";
+            res.render("photoupload", { notice });
         }
     });
 });
+
+app.get("/gallery", (req, res) => {
+
+    let sqlReq = "SELECT id, file_name, alt_text, added FROM vp1_photos WHERE privacy = 3";
+    conn.query(sqlReq, (err, results) => {
+        if (err) {
+            throw err;
+        }
+        let photoList = results.map(item => ({
+            id: item.id,
+            file_name: item.file_name,
+            alt_text: item.alt_text,
+            added: dtEt.givenDateTime(item.added)
+        }));
+        res.render("gallery", { photoList });
+    });
+});
+
 
 app.listen(5114);
