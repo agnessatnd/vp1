@@ -12,7 +12,11 @@ const multer = require("multer");
 const sharp = require("sharp");
 //parooli krupteerimiseks
 const bcrypt = require("bcrypt");
+//sessioonide haldamiseks
+const session = require("express-session");
 
+app.use(session({secret:"MinuSalajaneVoti", saveUninitialized: true, resave: true}));
+    
 app.set("view engine", "ejs");
 app.use(express.static("public"));
 //paringu URL-i parsimine, falsee kui ainult tekst, true kui muud ka
@@ -48,6 +52,12 @@ app.get("/", (req, res) => {
     });
 });
 
+app.get("/logout", (req, res) => {
+    req.session.destroy();
+    console.log("Kasutaja on välja logitud!");
+    res.redirect("/");
+});
+
 app.get("/signin", (req, res) => {
     res.render("signin");
 });
@@ -77,8 +87,10 @@ app.post("/signin", (req, res) => {
                         }
                         else{
                             if(compareresult){
-                                notice = "Sisselogimine õnnestus!";
-                                res.render("signin", { notice: notice});
+                                //notice = "Sisselogimine õnnestus!";
+                                //res.render("signin", { notice: notice});
+                                req.session.userId = result[0].id;
+                                res.redirect("/home");
                             }
                             else{
                                 notice = "Kasutajatunnus ja/või parool on vale!";
@@ -95,6 +107,28 @@ app.post("/signin", (req, res) => {
             }
         });
     }
+});
+
+const checkLogin = function(req, res, next){
+    if(req.session != null){
+        if(req.session.userId){
+            console.log("Kasutaja on sisselogitud!" + req.session.userId);
+            next();
+        }
+        else{
+            console.log("Login not detected!");
+            res.redirect("/signin");
+        }
+    }
+    else{
+        console.log("session not detected!");
+        res.redirect("/signin");
+    }
+};
+
+app.get("/home", checkLogin, (req, res) => {
+    console.log("Sees on kasutaja: " + req.session.userId);
+    res.render("home");
 });
 
 
@@ -182,7 +216,7 @@ app.get("/regvisit", (req, res)=>{
 });
 
 app.post("/regvisit", (req, res)=>{
-    console.log(req.body);
+    //console.log(req.body);
     const weekdayNow = dtEt.dayEt();
     const dateNow = dtEt.dateEt();
     const timeNow = dtEt.timeEt();
@@ -197,7 +231,7 @@ app.post("/regvisit", (req, res)=>{
                     throw err;
                 }
                 else {
-                    console.log("Faili kirjutati!");
+                    //console.log("Faili kirjutati!");
                     res.render("regvisit");
                 }
             });
@@ -510,20 +544,20 @@ app.post("/photoupload", upload.single("photoInput"), (req, res) => {
 
 app.get("/gallery", (req, res) => {
 
-    let sqlReq = "SELECT id, file_name, alt_text, added FROM vp1_photos WHERE privacy = 3";
-    conn.query(sqlReq, (err, results) => {
+    let sqlReq = "SELECT id, file_name, alt_text FROM vp1_photos WHERE privacy = ? AND deleted IS NULL ORDER BY id DESC;"
+    const privacy = 3;
+    let photoList = [];
+    conn.execute(sqlReq, [privacy], (err, results) => {
         if (err) {
             throw err;
         }
-        let photoList = results.map(item => ({
-            id: item.id,
-            file_name: item.file_name,
-            alt_text: item.alt_text,
-            added: dtEt.givenDateTime(item.added)
-        }));
-        res.render("gallery", { photoList });
+        else{
+            for(let i = 0; i < results.length; i++){
+                photoList.push({id: results[i].id, href: "/gallery/thumb/", filename: results[i].file_name, alt: results[i].alt_text});
+            }
+            res.render("gallery", { listData: photoList });
+        }
     });
 });
-
 
 app.listen(5114);
