@@ -16,6 +16,17 @@ const bcrypt = require("bcrypt");
 const session = require("express-session");
 
 app.use(session({secret:"MinuSalajaneVoti", saveUninitialized: true, resave: true}));
+
+app.use((req, res, next) => {
+    res.locals.user = req.session.userId
+        ? {
+            id: req.session.userId,
+            firstName: req.session.firstName,
+            lastName: req.session.lastName
+        }
+        : null;
+    next();
+});
     
 app.set("view engine", "ejs");
 app.use(express.static("public"));
@@ -70,7 +81,7 @@ app.post("/signin", (req, res) => {
         return res.render("signin", { notice: notice });
     }
     else{
-        let sqlReq = "SELECT id, password FROM vp1_users WHERE email = ?";
+        let sqlReq = "SELECT id, password, first_name, last_name FROM vp1_users WHERE email = ?";
         conn.execute(sqlReq, [req.body.emailInput], (err, result) => {
             if(err){
                 console.log("Viga andmebaasist lugedes!" + err);
@@ -90,6 +101,8 @@ app.post("/signin", (req, res) => {
                                 //notice = "Sisselogimine õnnestus!";
                                 //res.render("signin", { notice: notice});
                                 req.session.userId = result[0].id;
+                                req.session.firstName = result[0].first_name;
+                                req.session.lastName = result[0].last_name;
                                 res.redirect("/home");
                             }
                             else{
@@ -112,7 +125,7 @@ app.post("/signin", (req, res) => {
 const checkLogin = function(req, res, next){
     if(req.session != null){
         if(req.session.userId){
-            console.log("Kasutaja on sisselogitud!" + req.session.userId);
+            console.log("Kasutaja on sisselogitud!" + req.session.userId + " " + req.session.firstName + " " + req.session.lastName);
             next();
         }
         else{
@@ -127,7 +140,7 @@ const checkLogin = function(req, res, next){
 };
 
 app.get("/home", checkLogin, (req, res) => {
-    console.log("Sees on kasutaja: " + req.session.userId);
+    console.log("Sees on kasutaja: " + req.session.userId + " " + req.session.firstName + " " + req.session.lastName);
     res.render("home");
 });
 
@@ -240,7 +253,7 @@ app.post("/regvisit", (req, res)=>{
     });
 });
 
-app.get("/visitlog", (req, res)=>{
+app.get("/visitlog", checkLogin, (req, res)=>{
     let log = [];
     fs.readFile("public/text_files/visitorlog.txt", "utf-8", (err, data)=>{
         if(err || data.length === 0){
@@ -254,11 +267,11 @@ app.get("/visitlog", (req, res)=>{
     });
 });
 
-app.get("/eestifilm", (req, res)=>{
+app.get("/eestifilm", checkLogin, (req, res)=>{
     res.render("filmindex");
 });
 
-app.get("/eestifilm/tegelased", (req, res) => {
+app.get("/eestifilm/tegelased", checkLogin, (req, res) => {
     let sqlReq = "SELECT first_name, last_name, birth_date FROM person";
     let persons = [];
     conn.query(sqlReq, (err, sqlres) => {
@@ -280,7 +293,7 @@ app.get("/eestifilm/tegelased", (req, res) => {
     });
 });
 
-app.get("/visitlogdb", (req, res) => {
+app.get("/visitlogdb", checkLogin, (req, res) => {
     let sqlReq = "SELECT first_name, last_name, visit_time FROM visitlog";
     let visits = [];
     conn.query(sqlReq, (err, sqlres) => {
@@ -326,12 +339,12 @@ app.post("/regvisit_db", (req, res)=>{
 })
 
 
-app.get("/moviedatadb", (req, res) => {
+app.get("/moviedatadb", checkLogin, (req, res) => {
     let notice = "";
     res.render("moviedatadb", { notice });
 });
 
-app.get("/add-person", (req, res) => {
+app.get("/add-person", checkLogin, (req, res) => {
     let notice = "";
     let firstName = "";
     let lastName = "";
@@ -339,7 +352,7 @@ app.get("/add-person", (req, res) => {
     res.render("moviedatadb", {notice, firstName, lastName, birthDate });
 });
 
-app.get("/add-movie", (req, res) => {
+app.get("/add-movie", checkLogin, (req, res) => {
     let notice = "";
     let title = "";
     let productionYear = "";
@@ -349,7 +362,7 @@ app.get("/add-movie", (req, res) => {
 });
 
 
-app.get("/add-position", (req, res) => {
+app.get("/add-position", checkLogin, (req, res) => {
     let notice = "";
     let positionName = "";
     let description = "";
@@ -357,7 +370,7 @@ app.get("/add-position", (req, res) => {
 });
 
 
-app.post("/add-position", (req, res) => {
+app.post("/add-position", checkLogin, (req, res) => {
     let notice = "";
     let positionName = req.body.position_name;
     let description = req.body.description;
@@ -383,7 +396,7 @@ app.post("/add-position", (req, res) => {
 });
 
 // Tegelase lisamine
-app.post("/add-person", (req, res) => {
+app.post("/add-person", checkLogin, (req, res) => {
     let notice = "";
     let firstName = req.body.first_name;
     let lastName = req.body.last_name;
@@ -407,7 +420,7 @@ app.post("/add-person", (req, res) => {
 });
 
 // Filmide lisamine
-app.post("/add-movie", (req, res) => {
+app.post("/add-movie", checkLogin, (req, res) => {
     let notice = "";
     let title = req.body.title;
     let productionYear = req.body.production_year;
@@ -431,7 +444,7 @@ app.post("/add-movie", (req, res) => {
     }
 });
 
-app.get("/addnews", (req, res) => {
+app.get("/addnews", checkLogin, (req, res) => {
     let newsTitle = "";
     let newsText = "";
     let expired = "";
@@ -449,12 +462,17 @@ app.get("/addnews", (req, res) => {
     res.render("addnews", { newsTitle, newsText, expired, notice });
 });
 
-app.post("/addnews", (req, res) => {
+app.post("/addnews", checkLogin, (req, res) => {
     let newsTitle = req.body.titleInput;
     let newsText = req.body.newsInput;
     let expired = req.body.expireInput;
     let notice = "";
-    let user = 1;
+    let user = req.session.userId;
+
+    if (!user) {
+        notice = "Kasutaja pole sisse logitud!";
+        return res.render("addnews", { newsTitle, newsText, expired, notice });
+    }
 
     if (!newsTitle || newsTitle.length < 3) {
         notice = "Uudise pealkiri peab olema vähemalt 3 tähemärki!";
@@ -481,7 +499,7 @@ app.post("/addnews", (req, res) => {
     }
 });
 
-app.get("/news", (req, res) => {
+app.get("/news", checkLogin, (req, res) => {
     const today = dtEt.dateEt();
     const todayDay = dtEt.dayEt();
     const currentTime = dtEt.timeEt();
@@ -503,18 +521,24 @@ app.get("/news", (req, res) => {
     });
 });
 
-app.get("/photoupload", (req, res) => {
+app.get("/photoupload", checkLogin, (req, res) => {
     let notice = "";
 
     res.render("photoupload", { notice });
 });
 
-app.post("/photoupload", upload.single("photoInput"), (req, res) => {
+app.post("/photoupload", checkLogin, upload.single("photoInput"), (req, res) => {
     let notice = "";
     console.log(req.body);
     console.log(req.file);
     //genereerime oma failinime
     const fileName = "vp_" + Date.now() + ".jpg";
+    const user_id = req.session.userId;
+
+    if (!user_id) {
+        notice = "Kasutaja pole sisse logitud!";
+        return res.render("photoupload", { notice });
+    }
     //nimetame uleslaetud faili umber
     if (!req.file) {
         notice = "Pildifail on sisestamata!";
@@ -529,7 +553,6 @@ app.post("/photoupload", upload.single("photoInput"), (req, res) => {
     sharp(req.file.destination + fileName).resize(100,100).jpeg({quality: 90}).toFile("./public/gallery/thumb/" + fileName);
     //salvestame andmebaasi
     let sqlReq = "INSERT INTO vp1_photos (file_name, orig_name, alt_text, privacy, user_id) VALUES (?, ?, ?, ?, ?)";
-    const user_id = 1;
 
     conn.query(sqlReq, [fileName, req.file.originalname, req.body.altInput, req.body.privacyInput, user_id], (err, result)=>{
         if(err) {
@@ -542,7 +565,7 @@ app.post("/photoupload", upload.single("photoInput"), (req, res) => {
     });
 });
 
-app.get("/gallery", (req, res) => {
+app.get("/gallery", checkLogin, (req, res) => {
 
     let sqlReq = "SELECT id, file_name, alt_text FROM vp1_photos WHERE privacy = ? AND deleted IS NULL ORDER BY id DESC;"
     const privacy = 3;

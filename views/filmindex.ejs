@@ -9,6 +9,9 @@
     <h1>Agnessa Tund</h1>
     <p>see leht on loodud õppetöö raames <a href="https:/www.tlu.ee" target="_blank">Tallinna Ülikoolis</a> ja ei sisalda tõsiseltvõetavat sisu</p>
     <hr>
+    <% if (user) { %>
+      <p>Sisse loginud kasutaja:  <%= user.firstName %> <%= user.lastName %></p>
+    <% } %>
     <h2>Eesti film</h2>
     <ul>
       <li><a href="/home">Avaleht</a></li>
