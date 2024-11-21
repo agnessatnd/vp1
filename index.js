@@ -14,6 +14,7 @@ const sharp = require("sharp");
 const bcrypt = require("bcrypt");
 //sessioonide haldamiseks
 const session = require("express-session");
+const async = require("async");
 
 app.use(session({secret:"MinuSalajaneVoti", saveUninitialized: true, resave: true}));
 
@@ -293,6 +294,55 @@ app.get("/eestifilm/tegelased", checkLogin, (req, res) => {
     });
 });
 
+app.get("/eestifilm/addRelations", (req, res) => {
+    // votan kasutusele async mooduli, et korraga teha mitu andmebaasiparingut
+    const filmQueries = [
+        function(callback){
+            let sqlReq1 = "SELECT id, first_name, last_name, birth_date FROM person";
+            conn.execute(sqlReq1, (err, result)=>{
+                if(err){
+                    return callback(err);
+                }
+                else{
+                    return callback(null, result);
+                }
+            });
+        },
+        function(callback){
+            let sqlReq2 = "SELECT id, title, production_year FROM movie";
+            conn.execute(sqlReq2, (err, result)=>{
+                if(err){
+                    return callback(err);
+                }
+                else{
+                    return callback(null, result);
+                }
+            });
+        },
+        function(callback){
+            let sqlReq3 = "SELECT id, position_name FROM `position`";
+            conn.execute(sqlReq3, (err, result)=>{
+                if(err){
+                    return callback(err);
+                }
+                else{
+                    return callback(null, result);
+                }
+            });
+        }
+    ];
+    //paneme need paringud paaralleelselt jooksma, tulemuseks saame kolme paringu koodid
+    async.parallel(filmQueries, (err, results)=>{
+        if(err){
+            throw err;
+        }
+        else{
+            console.log(results);
+            res.render("addRelations", {personList: results[0], movieList: results[1], positionList: results[2]});
+        }
+    });
+})
+
 app.get("/visitlogdb", checkLogin, (req, res) => {
     let sqlReq = "SELECT first_name, last_name, visit_time FROM visitlog";
     let visits = [];
@@ -444,82 +494,9 @@ app.post("/add-movie", checkLogin, (req, res) => {
     }
 });
 
-app.get("/addnews", checkLogin, (req, res) => {
-    let newsTitle = "";
-    let newsText = "";
-    let expired = "";
-    let notice = "";
-
-    const today = new Date();
-    const tenDaysFromNow = new Date(today);
-    tenDaysFromNow.setDate(today.getDate() + 10);
-
-    const year = tenDaysFromNow.getFullYear();
-    const month = String(tenDaysFromNow.getMonth() + 1).padStart(2, '0');
-    const day = String(tenDaysFromNow.getDate()).padStart(2, '0');
-    expired = `${year}-${month}-${day}`;
-
-    res.render("addnews", { newsTitle, newsText, expired, notice });
-});
-
-app.post("/addnews", checkLogin, (req, res) => {
-    let newsTitle = req.body.titleInput;
-    let newsText = req.body.newsInput;
-    let expired = req.body.expireInput;
-    let notice = "";
-    let user = req.session.userId;
-
-    if (!user) {
-        notice = "Kasutaja pole sisse logitud!";
-        return res.render("addnews", { newsTitle, newsText, expired, notice });
-    }
-
-    if (!newsTitle || newsTitle.length < 3) {
-        notice = "Uudise pealkiri peab olema vähemalt 3 tähemärki!";
-        return res.render("addnews", { newsTitle, newsText, expired, notice });
-    }
-    if (!newsText || newsText.length < 10) {
-        let notice = "Uudise sisu peab olema vähemalt 10 tähemärki!";
-        return res.render("addnews", { newsTitle, newsText, expired, notice });
-    }
-
-    if (!newsTitle || !newsText || !expired) {
-        notice = "Osa andmeid on sisestamata!";
-        res.render("addnews", {newsTitle, newsText, expired, notice});
-    } else {
-        let sqlreq = "INSERT INTO vp1_news (news_title, news_text, expire_date, user_id) VALUES (?, ?, ?, ?)";
-        conn.query(sqlreq, [newsTitle, newsText, expired, user], (err) => {
-            if (err) {
-                throw err;
-            } else {
-                notice = "Uudis salvestatud!";
-                res.render("addnews", {newsTitle: "", newsText: "", expired: "", notice});
-            }
-        });
-    }
-});
-
-app.get("/news", checkLogin, (req, res) => {
-    const today = dtEt.dateEt();
-    const todayDay = dtEt.dayEt();
-    const currentTime = dtEt.timeEt();
-
-    let sqlReq = "SELECT news_title, news_text, news_date FROM vp1_news WHERE expire_date >= ? ORDER BY id DESC";
-    const formattedDate = new Date().toISOString().split('T')[0];
-    conn.query(sqlReq, [formattedDate], (err, results) => {
-        if (err) {
-            throw err;
-        } else {
-            let newsList = results.map(item => ({
-                news_title: item.news_title,
-                news_text: item.news_text,
-                news_date: dtEt.givenDate(item.news_date)
-            }));
-
-            res.render("news", { newsList, today, todayDay, currentTime });
-        }
-    });
-});
+//uudiste osa eraldi marsruutide failiga
+const newsRoutes = require("./routes/newsRoutes");
+app.use("/news", newsRoutes);
 
 app.get("/photoupload", checkLogin, (req, res) => {
     let notice = "";

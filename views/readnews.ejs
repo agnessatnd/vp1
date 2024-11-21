@@ -12,11 +12,23 @@
     <% if (user) { %>
       <p>Sisse loginud kasutaja:  <%= user.firstName %> <%= user.lastName %></p>
     <% } %>
-    <h2>Eesti film</h2>
     <ul>
       <li><a href="/home">Avaleht</a></li>
-      <li><a href="/eestifilm/tegelased">Eesti filmi tegelased</a></li>
-      <li><a href="/eestifilm/addRelations">Lisa seosed</a></li>
     </ul>
+    <hr>
+    <h1>Uudised</h1>
+    <% if (newsList.length === 0) { %>
+        <p>Ei leitud ühtegi uudist.</p>
+    <% } else { %>
+        <ul>
+            <% newsList.forEach(news => { %>
+                <li>
+                    <h2><%= news.news_title %></h2>
+                    <p>Lisamise kuupäev: <%= news.news_date %></p>
+                    <pre>Sisu: <%= news.news_text %></pre>
+                </li>
+            <% }); %>
+        </ul>
+    <% } %>
   </body>
 </html>
