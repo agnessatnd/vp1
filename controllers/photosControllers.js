@@ -1,9 +1,8 @@
 const mysql = require("mysql2");
 const dbInfo = require("../../../vp2024_config.js");
-const multer = require("multer");
+const fs = require("fs");
 const sharp = require("sharp");
-
-const upload = multer({dest: "../public/gallery/orig/"});
+const async = require("async");
 
 const conn = mysql.createConnection({
     host: dbInfo.configData.host,
@@ -32,10 +31,9 @@ const uploadPhoto = (req, res) => {
 // @route POST /photos/photoupload
 // @accsess private
 
-const uploadingPhoto = (upload.single("photoInput"), (req, res) => {
+const uploadingPhoto = (req, res) => {
     let notice = "";
-    console.log("req body: " + req.body);
-    console.log("req fail: " + req.file);
+    
     //genereerime oma failinime
     const fileName = "vp_" + Date.now() + ".jpg";
     const user_id = req.session.userId;
@@ -54,8 +52,10 @@ const uploadingPhoto = (upload.single("photoInput"), (req, res) => {
 
     });
     //teeme pildi kahes erisuuruses
-    sharp(req.file.destination + fileName).resize(800,600).jpeg({quality: 90}).toFile("../public/gallery/normal/" + fileName);
-    sharp(req.file.destination + fileName).resize(100,100).jpeg({quality: 90}).toFile("../public/gallery/thumb/" + fileName);
+    sharp(req.file.destination + fileName).resize(800,600).jpeg({quality: 90}).toFile("./public/gallery/normal/" + fileName), (err) => {
+        if (err) console.error("Error resizing for normal size:", err);
+    };
+    sharp(req.file.destination + fileName).resize(100,100).jpeg({quality: 90}).toFile("./public/gallery/thumb/" + fileName);
     //salvestame andmebaasi
     let sqlReq = "INSERT INTO vp1_photos (file_name, orig_name, alt_text, privacy, user_id) VALUES (?, ?, ?, ?, ?)";
 
@@ -68,17 +68,78 @@ const uploadingPhoto = (upload.single("photoInput"), (req, res) => {
             res.render("photoupload", { notice });
         }
     });
-});
+};
 
 // @desc page for gallery
 // @route GET /photos/gallery
 // @accsess private
-const gallery = (req, res) => {
 
-    let sqlReq = "SELECT id, file_name, alt_text FROM vp1_photos WHERE privacy = ? AND deleted IS NULL ORDER BY id DESC;"
+const galleryOpenPage = (req, res) => {
+    res.redirect("/photos/gallery/1");
+}
+
+const galleryPage = (req, res) => {
+    let galleryLinks = "";
+    let page = parseInt(req.params.page);
+    if(page < 1){
+        page = 1;
+    }
+    const photoLimit = 5;
+    let skip = 0;
+    let sqlReq = "SELECT id, file_name, alt_text FROM vp1_photos WHERE privacy = ? AND deleted IS NULL ORDER BY id DESC LIMIT ?, ?";
     const privacy = 3;
+
+    //teeme paringud, mida tuleb kindlasti uksteise jarel teha
+    const galleryPageTasks = [
+        function(callback){
+            conn.execute("SELECT COUNT(id) as photos FROM vp1_photos WHERE privacy = ? AND deleted IS NULL", [privacy], (err, results) => {
+                if(err){
+                    return callback(err, null);
+                }
+                else{
+                    return callback(null, results);
+                }
+            });
+        },
+        function(photoCount, callback){
+            console.log("Fotosid on + " + photoCount[0].photos);
+            if ((page - 1) * photoLimit >= photoCount[0].photos){
+                page = Math.ceil(photoCount[0].photos / photoLimit)
+            }
+            console.log("Lehekulg on " + page);
+            //lingid oleksid
+            // <a href="/photos/gallery/1">eelmine leht</a> | <a href="/photos/gallery/2">järgmine leht</a>
+            if (page == 1){
+                galleryLinks = "eelmine leht &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;";
+            }
+            else {
+                galleryLinks = '<a href="/photos/gallery/' + (page - 1) + '">eelmine leht &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;';
+            }
+            if (page * photoLimit >= photoCount[0].photos){
+                galleryLinks += "järgmine leht";
+            }
+            else {
+                galleryLinks += '<a href="/photos/gallery/' + (page + 1) + '">järgmine leht</a>';
+            }
+            return callback(null, page);
+        }
+    ];
+    //async waterfall
+    async.waterfall(galleryPageTasks, (err, results)=>{
+        if (err){
+            throw err;
+        }
+        else{
+            console.log(results);
+        }
+    })
+
+    /*if(page != parseInt(req.params.page)) {
+        res.redirect("/photos/gallery/" + page);
+    };*/
+    skip = (page - 1) * photoLimit;
     let photoList = [];
-    conn.execute(sqlReq, [privacy], (err, results) => {
+    conn.execute(sqlReq, [privacy, skip, photoLimit], (err, results) => {
         if (err) {
             throw err;
         }
@@ -86,7 +147,7 @@ const gallery = (req, res) => {
             for(let i = 0; i < results.length; i++){
                 photoList.push({id: results[i].id, href: "/gallery/thumb/", filename: results[i].file_name, alt: results[i].alt_text});
             }
-            res.render("gallery", { listData: photoList });
+            res.render("gallery", { listData: photoList, links: galleryLinks });
         }
     });
 };
@@ -95,5 +156,6 @@ module.exports = {
     photosHome,
     uploadPhoto,
     uploadingPhoto,
-    gallery
+    galleryOpenPage,
+    galleryPage
 };

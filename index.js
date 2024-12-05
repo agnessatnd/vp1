@@ -123,9 +123,6 @@ app.post("/signin", (req, res) => {
     }
 });
 
-app.get("/photos", (req, res) => { 
-    res.render("photosindex");
-});
 
 const checkLogin = function(req, res, next){
     if(req.session != null){
@@ -325,6 +322,13 @@ app.use("/eestifilm", movieRoutes);
 const newsRoutes = require("./routes/newsRoutes");
 app.use("/news", newsRoutes);
 
+const photosRoutes = require("./routes/photosRoutes");
+app.use("/photos", photosRoutes);
+
+/*app.get("/photos", (req, res) => { 
+    res.render("photosindex");
+});
+
 app.get("/photos/photoupload", checkLogin, (req, res) => {
     let notice = "";
 
@@ -386,5 +390,5 @@ app.get("/photos/gallery", checkLogin, (req, res) => {
         }
     });
 });
-
+*/
 app.listen(5114);

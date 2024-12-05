@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="et">
+  <head>
+    <meta charset="utf-8" />
+    <title>Agnessa</title>
+  </head>
+  <body>
+    <p>see leht on loodud õppetöö raames <a href="https:/www.tlu.ee" target="_blank">Tallinna Ülikoolis</a> ja ei sisalda tõsiseltvõetavat sisu</p>
+    <hr>
+    <h3>Viljavedu</h3>
+    <li><a href="/">Tagasi</a></li>
+    <hr>
+    <p><%= notice %></p>
+    <form action="/add" method="post">
+      <label for="truckInput">Sisestage auto nr märk:</label><br>
+      <input type="text" id="truckInput" name="truckInput"><br>
+      <label for="weightInInput">Sisestage lattu sisenemismass (kg)</label><br>
+      <input type="number" id="weightInInput" name="weightInInput"><br>
+      <label for="weightOutInput">Sisestage väljumismass (kg)</label><br>
+      <input type="number" id="weightOutInput" name="weightOutInput"><br>
+      <input type="submit" name="dataSubmit" value="Salvesta">
+  </form>
+  <p>Uuenda autode väljumismassi</p>
+  <form action="/update" method="post">
+    <label for="truckNrInput">Valige auto nr mark:</label><br>
+    <select id="truckNrInput" name="truckNrInput">
+      <% trucks.forEach(function(truck) { %>
+        <option value="<%= truck.id %>"><%= truck.truck %></option>
+      <% }); %>
+    </select><br>
+    <label for="weightOutUpdate">Sisestage väljumismass (kg)</label><br>
+    <input type="number" id="weightOutUpdate" name="weightOutUpdate"><br>
+    <input type="submit" name="dataUpdate" value="Uuenda">
+  </form>
+  </body>
+</html>

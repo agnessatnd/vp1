@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="et">
+  <head>
+    <meta charset="utf-8" />
+    <title>Agnessa</title>
+  </head>
+  <body>
+    <p>see leht on loodud õppetöö raames <a href="https:/www.tlu.ee" target="_blank">Tallinna Ülikoolis</a> ja ei sisalda tõsiseltvõetavat sisu</p>
+    <hr>
+    <h3>Viljavedu</h3>
+    <li><a href="/">Tagasi</a></li>
+    <hr>
+    <p>Kokkuvõte</p>
+    <ul>
+        <ul>
+          <% if (data.length === 0) { %>
+            <p>Ei leitud andmeid.</p>
+          <% } else { %>
+              <% data.forEach(veod => { %>
+                <li>
+                  <p>Sõiduki number: <%= veod.truck %></p>
+                  <p>Sisenemis mass: <%= veod.weight_in %></p>
+                  <p>Väljumis mass: <%= veod.weight_out %></p>
+                  <p>Kogu mass: <%= veod.kokkuvote %></p>
+                </li>
+              <% }); %>
+          <% } %>          
+          </ul>
+      </ul>
+  </body>
+</html>
